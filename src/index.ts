@@ -70,11 +70,10 @@ interface MineResponse {
   message?: string;
 }
 
-interface Stats {
-  num_sequences: number;
-  num_programs: number;
-  num_users: number;
-  last_updated?: string;
+interface StatsSummary {
+  numSequences: number;
+  numPrograms: number;
+  numFormulas: number;
 }
 
 /**
@@ -209,8 +208,8 @@ class LODAApiClient {
   /**
    * Get LODA project statistics
    */
-  async getStats(): Promise<Stats> {
-    return this.makeRequest('/stats');
+  async getStatsSummary(): Promise<StatsSummary> {
+    return this.makeRequest('/stats/summary');
   }
 }
 
@@ -425,7 +424,7 @@ class LODAMCPServer {
       case "get_mining_status":
         return this.handleGetMiningStatus(args);
       case "get_stats":
-        return this.handleGetStats();
+        return this.handleGetStatsSummary();
       default:
         throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
     }
@@ -683,8 +682,8 @@ class LODAMCPServer {
   /**
    * Handle get_stats tool
    */
-  private async handleGetStats() {
-    const stats = await this.apiClient.getStats();
+  private async handleGetStatsSummary() {
+    const stats = await this.apiClient.getStatsSummary();
     
     return {
       content: [
@@ -692,10 +691,9 @@ class LODAMCPServer {
           type: "text",
           text: `📊 LODA Project Statistics\n` +
                 `${'='.repeat(50)}\n` +
-                `🔢 OEIS Sequences: ${stats.num_sequences.toLocaleString()}\n` +
-                `🔧 LODA Programs: ${stats.num_programs.toLocaleString()}\n` +
-                `👥 Contributors: ${stats.num_users.toLocaleString()}\n` +
-                (stats.last_updated ? `🕐 Last Updated: ${stats.last_updated}\n` : '') +
+                `🔢 OEIS Sequences: ${stats.numSequences.toLocaleString()}\n` +
+                `🔧 LODA Programs: ${stats.numPrograms.toLocaleString()}\n` +
+                `👥 Contributors: ${stats.numFormulas.toLocaleString()}\n` +
                 `\n🌟 The LODA project is a distributed effort to mine programs that\n` +
                 `compute integer sequences from the OEIS database, contributing to\n` +
                 `mathematical research and algorithmic discovery.`
