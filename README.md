@@ -2,38 +2,38 @@
 
 A Model Context Protocol (MCP) server for the LODA Language API, providing seamless access to the LODA language and integer sequences from the On-Line Encyclopedia of Integer Sequences® (OEIS®).
 
+
 ## 🌟 Overview
 
-**LODA** (Lexicographic Ordering of Divide-and-conquer Algorithms) is an assembly language and computational model for mining programs that compute integer sequences. This MCP server enables you to:
+**LODA** (_Lexicographical Order Descent Assembly_) is an assembly language and computational model for integer sequences. This MCP server enables you to:
 
-- 🔍 **Explore OEIS sequences** with rich metadata and formatting
+- 🔍 **Explore integer sequences** with rich metadata and formatting
 - 🔧 **Discover LODA programs** that compute specific sequences  
 - ⚡ **Execute programs** in real-time and compute sequence terms
-- ⛏️ **Mine new programs** using LODA's distributed mining system
-- 📊 **Monitor operations** and access project statistics
+- 📊 **Monitor project statistics**
 
 ## ✨ Features
 
+
 ### Core Capabilities
-- **Complete OEIS Integration**: Access any sequence with proper A-number formatting
-- **Program Discovery**: Find existing LODA programs for sequences
+
+- **OEIS-style Sequence Integration**: Access any sequence with A-number formatting
+- **Program Discovery**: Find and search LODA programs for sequences
 - **Real-time Execution**: Run LODA programs and see results instantly
-- **Mining Operations**: Start and monitor program discovery for sequences
-- **Rich Formatting**: Beautiful, emoji-enhanced output with clear structure
 - **Robust Error Handling**: Comprehensive validation and error messages
-- **Production Ready**: Full TypeScript implementation with proper types
 
 ### Available Tools
 
 | Tool | Description | Primary Use Case |
 |------|-------------|------------------|
-| `get_oeis_sequence` | Get detailed OEIS sequence information | Research mathematical sequences |
-| `get_program` | Retrieve specific LODA program by ID | Analyze program implementations |
-| `get_programs_for_sequence` | Find all programs for a sequence | Compare different algorithmic approaches |
-| `run_program` | Execute LODA programs | Test and validate program correctness |
-| `start_mining` | Begin mining new programs | Discover new implementations |
-| `get_mining_status` | Check mining operation progress | Monitor long-running discoveries |
+| `get_sequence` | Get details about an integer sequence by ID | Research mathematical sequences |
+| `search_sequences` | Search for integer sequences | Find sequences by keyword or ID |
+| `get_program` | Get details about a LODA program by ID | Analyze program implementations |
+| `search_programs` | Search for LODA programs | Find programs by keyword or ID |
+| `eval_program` | Evaluate a LODA program | Test and validate program correctness |
+| `submit_program` | Submit a new LODA program | Contribute new implementations |
 | `get_stats` | View LODA project statistics | Understand project scope and growth |
+| `get_submitters` | List all submitters and their number of programs | See top contributors |
 
 ## 🚀 Quick Start
 
@@ -168,35 +168,65 @@ lpe"
 
 ## 🔧 API Reference
 
+
 ### Tool Schemas
 
-All tools use strict JSON schemas with proper validation:
+All tools use strict JSON schemas with proper validation. Example schemas:
 
-#### `get_oeis_sequence`
-
+#### `get_sequence`
 ```json
 {
-  "oeis_id": 45  // number: OEIS sequence ID (0+)
+  "id": "A000045"
 }
 ```
 
-#### `run_program`
-
+#### `search_sequences`
 ```json
 {
-  "program": "mov $0,1\nlpb $1...",  // string: LODA program code
-  "num_terms": 20                    // number: terms to compute (1-1000)
+  "q": "Fibonacci",
+  "limit": 5
 }
 ```
 
-#### `start_mining`
-
+#### `get_program`
 ```json
 {
-  "oeis_id": 142857,      // number: sequence to mine (required)
-  "max_length": 100,      // number: max program length (optional)
-  "max_runtime": 300      // number: max runtime in seconds (optional)
+  "id": "A000045"
 }
+```
+
+#### `search_programs`
+```json
+{
+  "q": "Fibonacci",
+  "limit": 5
+}
+```
+
+#### `eval_program`
+```json
+{
+  "code": "mov $1,10\npow $1,$0\nmov $0,$1\ndiv $0,9",
+  "t": 10
+}
+```
+
+#### `submit_program`
+```json
+{
+  "id": "A000045",
+  "code": "mov $2,1\nlpb $0\n  sub $0,2\n  add $2,$1\n  add $1,$2\nlpe\nmul $0,$2\nadd $0,$1"
+}
+```
+
+#### `get_stats`
+```json
+{}
+```
+
+#### `get_submitters`
+```json
+{}
 ```
 
 ### Response Format
@@ -204,7 +234,7 @@ All tools use strict JSON schemas with proper validation:
 All responses include:
 
 - **Rich formatting** with emojis and visual structure
-- **Clear status indicators** (✅ success, ⏱️ timeout, ❌ error)
+- **Clear status indicators**
 - **Contextual information** and helpful tips
 - **Proper error messages** with actionable guidance
 
@@ -284,19 +314,21 @@ echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | npm start
 - [MCP Specification](https://modelcontextprotocol.io/) - Model Context Protocol docs
 - [LODA API Documentation](https://api.loda-lang.org/v2/openapi.yaml) - OpenAPI specification
 
+
 ## 📄 API Endpoints
 
-Based on the official OpenAPI specification:
+Based on the official OpenAPI v2 specification:
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/oeis/{oeis_id}` | GET | Get OEIS sequence information |
-| `/programs/{program_id}` | GET | Get LODA program details |
-| `/oeis/{oeis_id}/programs` | GET | Get programs for sequence |
-| `/programs/run` | POST | Execute LODA program |
-| `/mine` | POST | Start mining operation |
-| `/mine/{mine_id}` | GET | Get mining status |
-| `/stats` | GET | Get project statistics |
+| `/sequences/{id}` | GET | Get integer sequence details |
+| `/sequences/search` | GET | Search integer sequences |
+| `/programs/{id}` | GET | Get LODA program details |
+| `/programs/search` | GET | Search LODA programs |
+| `/programs/eval` | POST | Evaluate a LODA program |
+| `/programs/{id}/submit` | POST | Submit a new LODA program |
+| `/stats/summary` | GET | Get statistics summary |
+| `/stats/submitters` | GET | List all submitters |
 
 ## 📝 License
 
