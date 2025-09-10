@@ -38,7 +38,7 @@ interface OEISSequence {
 interface Program {
   id: number;
   oeis_id: number;
-  program: string;
+  code: string;
   length: number;
   status: "ok" | "timeout" | "error" | "unknown";
   created?: string;
@@ -498,7 +498,7 @@ class LODAMCPServer {
                 (program.changed ? `📝 Last Changed: ${program.changed}\n` : '') +
                 `\n💻 Program Code:\n` +
                 `${'─'.repeat(30)}\n` +
-                `${program.program}\n` +
+                `${program.code}\n` +
                 `${'─'.repeat(30)}`
         }
       ]
@@ -545,11 +545,11 @@ class LODAMCPServer {
       output += `${index + 1}. 🆔 Program ${program.id} | 📏 Length: ${program.length} | ${statusEmoji} ${program.status}\n`;
       
       // Show program code for shorter programs
-      if (program.program.length < 200) {
-        const compactCode = program.program.replace(/\n/g, '; ').substring(0, 150);
-        output += `   💻 Code: ${compactCode}${program.program.length > 150 ? '...' : ''}\n`;
+      if (program.code.length < 200) {
+        const compactCode = program.code.replace(/\n/g, '; ').substring(0, 150);
+        output += `   💻 Code: ${compactCode}${program.code.length > 150 ? '...' : ''}\n`;
       } else {
-        output += `   💻 Code: ${program.program.substring(0, 100).replace(/\n/g, '; ')}...\n`;
+        output += `   💻 Code: ${program.code.substring(0, 100).replace(/\n/g, '; ')}...\n`;
       }
       output += '\n';
     });
