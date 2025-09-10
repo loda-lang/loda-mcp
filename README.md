@@ -1,4 +1,4 @@
-# LODA API MCP Server
+# LODA MCP Server
 
 A Model Context Protocol (MCP) server for the LODA Language API, providing seamless access to the LODA language and integer sequences from the On-Line Encyclopedia of Integer Sequences® (OEIS®).
 
@@ -44,29 +44,18 @@ A Model Context Protocol (MCP) server for the LODA Language API, providing seaml
 
 ### Installation
 
-1. **Create and set up project**:
-
-   ```bash
-   mkdir loda-mcp && cd loda-mcp
-   mkdir src
-   
-   # Copy the TypeScript code to src/index.ts
-   # Copy package.json and tsconfig.json to project root
-   ```
-
-2. **Install dependencies**:
+1. **Install dependencies**:
 
    ```bash
    npm install
    ```
-
-3. **Build the server**:
+2. **Build the server**:
 
    ```bash
    npm run build
    ```
 
-4. **Test the installation**:
+3. **Test the installation**:
 
    ```bash
    npm run test-connection  # Test API connectivity

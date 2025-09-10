@@ -2,6 +2,9 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import express from "express";
+import { randomUUID } from "node:crypto";
 import {
   CallToolRequestSchema,
   ErrorCode,
@@ -433,10 +436,58 @@ class LODAMCPServer {
     };
   }
 
-  async run(): Promise<void> {
+  async runStdio(): Promise<void> {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
-    console.error("LODA API MCP server v2.0.0 running on stdio");
+    console.error("LODA MCP server v2.0.0 running on stdio");
+  }
+
+  // HTTP/Express/Streamable MCP
+  static async runHttp(serverInstance: LODAMCPServer, port: number): Promise<void> {
+    const app = express();
+    app.use(express.json());
+
+    // Session management for MCP
+    const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
+
+    app.post('/mcp', async (req, res) => {
+      const sessionId = req.headers['mcp-session-id'] as string | undefined;
+      let transport: StreamableHTTPServerTransport;
+
+      if (sessionId && transports[sessionId]) {
+        transport = transports[sessionId];
+      } else {
+        transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => randomUUID(),
+          onsessioninitialized: (sid) => {
+            transports[sid] = transport;
+          },
+        });
+        // Connect only once per transport
+        await serverInstance.server.connect(transport);
+        transport.onclose = () => {
+          if (transport.sessionId) delete transports[transport.sessionId];
+        };
+      }
+      await transport.handleRequest(req, res, req.body);
+    });
+
+    // GET and DELETE for notifications/session termination
+    const handleSessionRequest = async (req: express.Request, res: express.Response) => {
+      const sessionId = req.headers['mcp-session-id'] as string | undefined;
+      if (!sessionId || !transports[sessionId]) {
+        res.status(400).send('Invalid or missing session ID');
+        return;
+      }
+      const transport = transports[sessionId];
+      await transport.handleRequest(req, res);
+    };
+    app.get('/mcp', handleSessionRequest);
+    app.delete('/mcp', handleSessionRequest);
+
+    app.listen(port, () => {
+      console.error(`LODA MCP server v2.0.0 running on http://localhost:${port}/mcp`);
+    });
   }
 }
 
@@ -452,8 +503,35 @@ process.on('uncaughtException', (error) => {
 });
 
 // Create and start the server
+// Parse port from command line args: --port=PORT or -p PORT
+function getPortArg(): number | undefined {
+  const argv = process.argv.slice(2);
+  let port: number | undefined;
+  for (let i = 0; i < argv.length; ++i) {
+    if (argv[i] === '--port' && argv[i + 1]) {
+      port = parseInt(argv[i + 1], 10);
+      break;
+    } else if (argv[i].startsWith('--port=')) {
+      port = parseInt(argv[i].split('=')[1], 10);
+      break;
+    } else if ((argv[i] === '-p' || argv[i] === '--p') && argv[i + 1]) {
+      port = parseInt(argv[i + 1], 10);
+      break;
+    }
+  }
+  return port;
+}
+
+const port = getPortArg();
 const server = new LODAMCPServer();
-server.run().catch((error) => {
-  console.error("Failed to run LODA MCP server:", error);
-  process.exit(1);
-});
+if (port !== undefined) {
+  LODAMCPServer.runHttp(server, port).catch((error) => {
+    console.error("Failed to run LODA MCP HTTP server:", error);
+    process.exit(1);
+  });
+} else {
+  server.runStdio().catch((error) => {
+    console.error("Failed to run LODA MCP server:", error);
+    process.exit(1);
+  });
+}
