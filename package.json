@@ -1,0 +1,63 @@
+{
+  "name": "loda-mcp",
+  "version": "1.0.0",
+  "description": "Complete MCP server for LODA Language API - mine and compute integer sequences from OEIS",
+  "main": "build/index.js",
+  "type": "module",
+  "bin": {
+    "loda-mcp": "build/index.js"
+  },
+  "files": [
+    "build/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node build/index.js",
+    "clean": "rm -rf build",
+    "prepare": "npm run build",
+    "test": "echo \"Run: echo '{\\\"jsonrpc\\\":\\\"2.0\\\",\\\"method\\\":\\\"tools/list\\\",\\\"id\\\":1}' | npm start\"",
+    "lint": "echo \"Linting not configured - consider adding eslint\"",
+    "type-check": "tsc --noEmit",
+    "test-connection": "curl -s https://api.loda-lang.org/v2/stats/summary || echo 'API connection test failed'"
+  },
+  "keywords": [
+    "mcp",
+    "server",
+    "loda",
+    "oeis",
+    "sequences",
+    "mathematics",
+    "assembly",
+    "mining",
+    "programs",
+    "model-context-protocol",
+    "artificial-intelligence"
+  ],
+  "author": "LODA MCP Server Contributors",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/loda-lang/loda-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/loda-lang/loda-mcp/issues"
+  },
+  "homepage": "https://loda-lang.org",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
