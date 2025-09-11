@@ -108,10 +108,11 @@ class LODAApiClient {
     return this.makeRequest(`/sequences/${id}`);
   }
 
-  async searchSequences(q: string, limit?: number, skip?: number): Promise<{ id: string; name: string }[]> {
+  async searchSequences(q: string, limit?: number, skip?: number): Promise<{ total: number; results: { id: string; name: string }[] }> {
     const params = new URLSearchParams({ q });
     if (limit !== undefined) params.append('limit', String(limit));
     if (skip !== undefined) params.append('skip', String(skip));
+    // The API returns { total, results }
     return this.makeRequest(`/sequences/search?${params.toString()}`);
   }
 
@@ -119,10 +120,11 @@ class LODAApiClient {
     return this.makeRequest(`/programs/${id}`);
   }
 
-  async searchPrograms(q: string, limit?: number, skip?: number): Promise<{ id: string; name: string }[]> {
+  async searchPrograms(q: string, limit?: number, skip?: number): Promise<{ total: number; results: { id: string; name: string }[] }> {
     const params = new URLSearchParams({ q });
     if (limit !== undefined) params.append('limit', String(limit));
     if (skip !== undefined) params.append('skip', String(skip));
+    // The API returns { total, results }
     return this.makeRequest(`/programs/search?${params.toString()}`);
   }
 
@@ -331,16 +333,18 @@ class LODAMCPServer {
     if (!q || typeof q !== 'string') {
       throw new McpError(ErrorCode.InvalidParams, "q is required");
     }
-    const results = await this.apiClient.searchSequences(q, limit, skip);
+    const result = await this.apiClient.searchSequences(q, limit, skip);
     return {
       content: [
         {
           type: "text",
-          text: results.length === 0 ?
+          text: result.results.length === 0 ?
             'No sequences found.' :
-            results.map(r => `${r.id}: ${r.name}`).join('\n')
+            result.results.map((r: {id: string, name: string}) => `${r.id}: ${r.name}`).join('\n') +
+            `\nTotal: ${result.total}`
         }
-      ]
+      ],
+      ...result
     };
   }
 
@@ -367,16 +371,18 @@ class LODAMCPServer {
     if (!q || typeof q !== 'string') {
       throw new McpError(ErrorCode.InvalidParams, "q is required");
     }
-    const results = await this.apiClient.searchPrograms(q, limit, skip);
+    const result = await this.apiClient.searchPrograms(q, limit, skip);
     return {
       content: [
         {
           type: "text",
-          text: results.length === 0 ?
+          text: result.results.length === 0 ?
             'No programs found.' :
-            results.map(r => `${r.id}: ${r.name}`).join('\n')
+            result.results.map((r: {id: string, name: string}) => `${r.id}: ${r.name}`).join('\n') +
+            `\nTotal: ${result.total}`
         }
-      ]
+      ],
+      ...result
     };
   }
 
