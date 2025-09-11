@@ -26,13 +26,13 @@ A Model Context Protocol (MCP) server for the LODA Language API, providing seaml
 
 | Tool | Description | Primary Use Case |
 |------|-------------|------------------|
-| `get_sequence` | Get details about an integer sequence by ID | Research mathematical sequences |
-| `search_sequences` | Search for integer sequences | Find sequences by keyword or ID |
 | `get_program` | Get details about a LODA program by ID | Analyze program implementations |
 | `search_programs` | Search for LODA programs | Find programs by keyword or ID |
 | `eval_program` | Evaluate a LODA program | Test and validate program correctness |
 | `submit_program` | Submit a new LODA program | Contribute new implementations |
-| `get_stats` | View LODA project statistics | Understand project scope and growth |
+| `get_sequence` | Get details about an integer sequence by ID | Research mathematical sequences |
+| `search_sequences` | Search for integer sequences | Find sequences by keyword or ID |
+| `get_stats_summary` | View LODA project summary statistics | Understand project scope and growth |
 | `get_submitters` | List all submitters and their number of programs | See top contributors |
 
 ## 🚀 Quick Start
@@ -208,7 +208,7 @@ All tools use strict JSON schemas with proper validation. Example schemas:
 }
 ```
 
-#### `get_stats`
+#### `get_stats_summary`
 ```json
 {}
 ```
@@ -265,7 +265,7 @@ LODAMCPServer
 DEBUG=* npm start
 
 # Test specific tool
-echo '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_stats","arguments":{}},"id":1}' | npm start
+echo '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_stats_summary","arguments":{}},"id":1}' | npm start
 ```
 
 ### Health Checks

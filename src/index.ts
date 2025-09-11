@@ -183,32 +183,6 @@ class LODAMCPServer {
       return {
         tools: [
           {
-            name: "get_sequence",
-            description: "Get details about an integer sequence by ID (e.g. A000045)",
-            inputSchema: {
-              type: "object",
-              properties: {
-                id: { type: "string", description: "Sequence ID (e.g. A000045)" }
-              },
-              required: ["id"],
-              additionalProperties: false
-            }
-          },
-          {
-            name: "search_sequences",
-            description: "Search for integer sequences by keywords, ID, or name.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                q: { type: "string", description: "Search query" },
-                limit: { type: "number", description: "Max results", minimum: 1, maximum: 100 },
-                skip: { type: "number", description: "Offset for pagination", minimum: 0 }
-              },
-              required: ["q"],
-              additionalProperties: false
-            }
-          },
-          {
             name: "get_program",
             description: "Get details about a LODA program by ID (e.g. A000045)",
             inputSchema: {
@@ -262,7 +236,33 @@ class LODAMCPServer {
             }
           },
           {
-            name: "get_stats",
+            name: "get_sequence",
+            description: "Get details about an integer sequence by ID (e.g. A000045)",
+            inputSchema: {
+              type: "object",
+              properties: {
+                id: { type: "string", description: "Sequence ID (e.g. A000045)" }
+              },
+              required: ["id"],
+              additionalProperties: false
+            }
+          },
+          {
+            name: "search_sequences",
+            description: "Search for integer sequences by keywords, ID, or name.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                q: { type: "string", description: "Search query" },
+                limit: { type: "number", description: "Max results", minimum: 1, maximum: 100 },
+                skip: { type: "number", description: "Offset for pagination", minimum: 0 }
+              },
+              required: ["q"],
+              additionalProperties: false
+            }
+          },
+          {
+            name: "get_stats_summary",
             description: "Get statistics summary for the LODA project.",
             inputSchema: { type: "object", properties: {}, additionalProperties: false }
           },
@@ -281,10 +281,6 @@ class LODAMCPServer {
       const safeArgs = (args && typeof args === 'object') ? args : {};
       try {
         switch (name) {
-          case "get_sequence":
-            return this.handleGetSequence(safeArgs as { id: string });
-          case "search_sequences":
-            return this.handleSearchSequences(safeArgs as { q: string; limit?: number; skip?: number });
           case "get_program":
             return this.handleGetProgram(safeArgs as { id: string });
           case "search_programs":
@@ -293,8 +289,12 @@ class LODAMCPServer {
             return this.handleEvalProgram(safeArgs as { code: string; t?: number; o?: number });
           case "submit_program":
             return this.handleSubmitProgram(safeArgs as { id: string; code: string });
-          case "get_stats":
-            return this.handleGetStats();
+          case "get_sequence":
+            return this.handleGetSequence(safeArgs as { id: string });
+          case "search_sequences":
+            return this.handleSearchSequences(safeArgs as { q: string; limit?: number; skip?: number });
+          case "get_stats_summary":
+            return this.handleGetStatsSummary();
           case "get_submitters":
             return this.handleGetSubmitters();
           default:
@@ -412,7 +412,7 @@ class LODAMCPServer {
     };
   }
 
-  private async handleGetStats() {
+  private async handleGetStatsSummary() {
     const stats = await this.apiClient.getStatsSummary();
     return {
       content: [
