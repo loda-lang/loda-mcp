@@ -108,11 +108,11 @@ class LODAApiClient {
     return this.makeRequest(`/sequences/${id}`);
   }
 
-  async searchSequences(q: string, limit?: number, skip?: number): Promise<{ total: number; results: { id: string; name: string }[] }> {
+  async searchSequences(q: string, limit?: number, skip?: number): Promise<{ total: number; results: { id: string; name: string; keywords?: string[] }[] }> {
     const params = new URLSearchParams({ q });
     if (limit !== undefined) params.append('limit', String(limit));
     if (skip !== undefined) params.append('skip', String(skip));
-    // The API returns { total, results }
+    // The API returns { total, results: [{id, name, keywords?}] }
     return this.makeRequest(`/sequences/search?${params.toString()}`);
   }
 
@@ -120,11 +120,11 @@ class LODAApiClient {
     return this.makeRequest(`/programs/${id}`);
   }
 
-  async searchPrograms(q: string, limit?: number, skip?: number): Promise<{ total: number; results: { id: string; name: string }[] }> {
+  async searchPrograms(q: string, limit?: number, skip?: number): Promise<{ total: number; results: { id: string; name: string; keywords?: string[] }[] }> {
     const params = new URLSearchParams({ q });
     if (limit !== undefined) params.append('limit', String(limit));
     if (skip !== undefined) params.append('skip', String(skip));
-    // The API returns { total, results }
+    // The API returns { total, results: [{id, name, keywords?}] }
     return this.makeRequest(`/programs/search?${params.toString()}`);
   }
 
@@ -147,8 +147,12 @@ class LODAApiClient {
     });
   }
 
-  async getStatsSummary(): Promise<StatsSummary> {
+  async getStats(): Promise<StatsSummary> {
     return this.makeRequest('/stats/summary');
+  }
+
+  async getKeywords(): Promise<{ name: string; description: string }[]> {
+    return this.makeRequest('/stats/keywords');
   }
 
   async getSubmitters(): Promise<Submitter[]> {
@@ -186,11 +190,11 @@ class LODAMCPServer {
         tools: [
           {
             name: "get_program",
-            description: "Get details about a LODA program by ID (e.g. A000045)",
+            description: "Retrieve detailed information about a LODA program for an integer sequence, including its author and code. The ID must match the sequence (e.g., A000045).",
             inputSchema: {
               type: "object",
               properties: {
-                id: { type: "string", description: "Program ID (e.g. A000045)" }
+                id: { type: "string", description: "ID of the LODA program (e.g. A000045)" }
               },
               required: ["id"],
               additionalProperties: false
@@ -198,13 +202,13 @@ class LODAMCPServer {
           },
           {
             name: "search_programs",
-            description: "Search for LODA programs by keywords, ID, or name.",
+            description: "Search for LODA programs by name, ID, keywords, and other criteria. Supports advanced queries and pagination.",
             inputSchema: {
               type: "object",
               properties: {
-                q: { type: "string", description: "Search query" },
-                limit: { type: "number", description: "Max results", minimum: 1, maximum: 100 },
-                skip: { type: "number", description: "Offset for pagination", minimum: 0 }
+                q: { type: "string", description: "Search query supporting keywords, properties, submitters, and advanced criteria. To require a keyword, include it; to exclude, prefix with '-' (e.g., -core)." },
+                limit: { type: "number", description: "Maximum number of results to return (pagination limit)", minimum: 1, maximum: 100 },
+                skip: { type: "number", description: "Number of items to skip before starting to collect the result set (pagination offset)", minimum: 0 }
               },
               required: ["q"],
               additionalProperties: false
@@ -212,13 +216,13 @@ class LODAMCPServer {
           },
           {
             name: "eval_program",
-            description: "Evaluate a LODA program and return sequence terms.",
+            description: "Evaluate a LODA program to generate the corresponding integer sequence. The request body should contain the program code in plain text format. Optionally specify the number of terms and offset.",
             inputSchema: {
               type: "object",
               properties: {
-                code: { type: "string", description: "LODA program code" },
-                t: { type: "number", description: "Number of terms", minimum: 1, maximum: 10000 },
-                o: { type: "number", description: "Offset (optional)" }
+                code: { type: "string", description: "LODA program code in plain text format." },
+                t: { type: "number", description: "Number of terms to compute" , minimum: 1, maximum: 10000 },
+                o: { type: "number", description: "The starting index (offset) for evaluating the sequence program. Overrides #offset directive or defaults to 0." }
               },
               required: ["code"],
               additionalProperties: false
@@ -226,12 +230,12 @@ class LODAMCPServer {
           },
           {
             name: "submit_program",
-            description: "Submit a new LODA program for a sequence.",
+            description: "Submit a new LODA program for a sequence. The request body should contain the program code as text/plain. The ID must match the sequence (e.g., A000045).",
             inputSchema: {
               type: "object",
               properties: {
-                id: { type: "string", description: "Sequence/program ID (e.g. A000045)" },
-                code: { type: "string", description: "LODA program code" }
+                id: { type: "string", description: "ID of the sequence/program (e.g. A000045)" },
+                code: { type: "string", description: "LODA program code in plain text format." }
               },
               required: ["id", "code"],
               additionalProperties: false
@@ -239,11 +243,11 @@ class LODAMCPServer {
           },
           {
             name: "get_sequence",
-            description: "Get details about an integer sequence by ID (e.g. A000045)",
+            description: "Retrieve detailed information about an integer sequence, including its terms, references, links, and keywords. The ID must match the sequence (e.g., A000045).",
             inputSchema: {
               type: "object",
               properties: {
-                id: { type: "string", description: "Sequence ID (e.g. A000045)" }
+                id: { type: "string", description: "ID of the integer sequence (e.g. A000045)" }
               },
               required: ["id"],
               additionalProperties: false
@@ -251,26 +255,31 @@ class LODAMCPServer {
           },
           {
             name: "search_sequences",
-            description: "Search for integer sequences by keywords, ID, or name.",
+            description: "Search for integer sequences by name, ID, keywords, and other criteria. Supports advanced queries and pagination.",
             inputSchema: {
               type: "object",
               properties: {
-                q: { type: "string", description: "Search query" },
-                limit: { type: "number", description: "Max results", minimum: 1, maximum: 100 },
-                skip: { type: "number", description: "Offset for pagination", minimum: 0 }
+                q: { type: "string", description: "Search query supporting keywords, properties, submitters, and advanced criteria. To require a keyword, include it; to exclude, prefix with '-' (e.g., -core)." },
+                limit: { type: "number", description: "Maximum number of results to return (pagination limit)", minimum: 1, maximum: 100 },
+                skip: { type: "number", description: "Number of items to skip before starting to collect the result set (pagination offset)", minimum: 0 }
               },
               required: ["q"],
               additionalProperties: false
             }
           },
           {
-            name: "get_stats_summary",
-            description: "Get statistics summary for the LODA project.",
+            name: "get_stats",
+            description: "Returns stats of the LODA project. This includes the number of sequences, programs, and formulas in the database.",
+            inputSchema: { type: "object", properties: {}, additionalProperties: false }
+          },
+          {
+            name: "get_keywords",
+            description: "Returns a list of all keywords with their descriptions.",
             inputSchema: { type: "object", properties: {}, additionalProperties: false }
           },
           {
             name: "get_submitters",
-            description: "List all submitters and their number of programs.",
+            description: "Returns a list of all submitters with their number of submitted programs.",
             inputSchema: { type: "object", properties: {}, additionalProperties: false }
           }
         ] as Tool[]
@@ -295,8 +304,10 @@ class LODAMCPServer {
             return this.handleGetSequence(safeArgs as { id: string });
           case "search_sequences":
             return this.handleSearchSequences(safeArgs as { q: string; limit?: number; skip?: number });
-          case "get_stats_summary":
-            return this.handleGetStatsSummary();
+          case "get_stats":
+            return this.handleGetStats();
+          case "get_keywords":
+            return this.handleGetKeywords();
           case "get_submitters":
             return this.handleGetSubmitters();
           default:
@@ -340,7 +351,9 @@ class LODAMCPServer {
           type: "text",
           text: result.results.length === 0 ?
             'No sequences found.' :
-            result.results.map((r: {id: string, name: string}) => `${r.id}: ${r.name}`).join('\n') +
+            result.results.map((r: {id: string, name: string, keywords?: string[]}) =>
+              `${r.id}: ${r.name}` + (r.keywords && r.keywords.length ? ` [${r.keywords.join(', ')}]` : '')
+            ).join('\n') +
             `\nTotal: ${result.total}`
         }
       ],
@@ -378,7 +391,9 @@ class LODAMCPServer {
           type: "text",
           text: result.results.length === 0 ?
             'No programs found.' :
-            result.results.map((r: {id: string, name: string}) => `${r.id}: ${r.name}`).join('\n') +
+            result.results.map((r: {id: string, name: string, keywords?: string[]}) =>
+              `${r.id}: ${r.name}` + (r.keywords && r.keywords.length ? ` [${r.keywords.join(', ')}]` : '')
+            ).join('\n') +
             `\nTotal: ${result.total}`
         }
       ],
@@ -418,8 +433,8 @@ class LODAMCPServer {
     };
   }
 
-  private async handleGetStatsSummary() {
-    const stats = await this.apiClient.getStatsSummary();
+  private async handleGetStats() {
+    const stats = await this.apiClient.getStats();
     return {
       content: [
         {
@@ -427,6 +442,19 @@ class LODAMCPServer {
           text: `Stats: Sequences=${stats.numSequences}, Programs=${stats.numPrograms}, Formulas=${stats.numFormulas}`
         }
       ]
+    };
+  }
+
+  private async handleGetKeywords() {
+    const keywords = await this.apiClient.getKeywords();
+    return {
+      content: [
+        {
+          type: "text",
+          text: keywords.length === 0 ? 'No keywords found.' : keywords.map(k => `${k.name}: ${k.description}`).join('\n')
+        }
+      ],
+      keywords
     };
   }
 

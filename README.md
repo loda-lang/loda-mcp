@@ -32,7 +32,8 @@ A Model Context Protocol (MCP) server for the LODA Language API, providing seaml
 | `submit_program` | Submit a new LODA program | Contribute new implementations |
 | `get_sequence` | Get details about an integer sequence by ID | Research mathematical sequences |
 | `search_sequences` | Search for integer sequences | Find sequences by keyword or ID |
-| `get_stats_summary` | View LODA project summary statistics | Understand project scope and growth |
+| `get_stats` | View LODA project summary statistics | Understand project scope and growth |
+| `get_keywords` | List all keywords and their descriptions | Explore available keywords |
 | `get_submitters` | List all submitters and their number of programs | See top contributors |
 
 ## 🚀 Quick Start
@@ -208,7 +209,13 @@ All tools use strict JSON schemas with proper validation. Example schemas:
 }
 ```
 
-#### `get_stats_summary`
+
+#### `get_stats`
+```json
+{}
+```
+
+#### `get_keywords`
 ```json
 {}
 ```

@@ -10,3 +10,4 @@ dist/
 coverage/
 *.tsbuildinfo
 .vscode/
+openapi.v2.yaml
