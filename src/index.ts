@@ -139,8 +139,13 @@ class LODAApiClient {
     });
   }
 
-  async submitProgram(id: string, code: string): Promise<void> {
-    await this.makeRequest(`/programs/${id}/submit`, {
+  async submitProgram(id: string, code: string, submitter?: string): Promise<void> {
+    let url = `/programs/${id}/submit`;
+    if (submitter) {
+      const params = new URLSearchParams({ submitter });
+      url += `?${params.toString()}`;
+    }
+    await this.makeRequest(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: code,
@@ -417,15 +422,15 @@ class LODAMCPServer {
     };
   }
 
-  private async handleSubmitProgram(args: { id: string; code: string }) {
-    const { id, code } = args;
+  private async handleSubmitProgram(args: { id: string; code: string; submitter?: string }) {
+    const { id, code, submitter } = args;
     if (!/^A\d{6,}$/.test(id)) {
       throw new McpError(ErrorCode.InvalidParams, "id must be a string like A000045");
     }
     if (!code || typeof code !== 'string') {
       throw new McpError(ErrorCode.InvalidParams, "code is required");
     }
-    await this.apiClient.submitProgram(id, code);
+    await this.apiClient.submitProgram(id, code, submitter);
     return {
       content: [
         { type: "text", text: `Program submitted for ${id}.` }
