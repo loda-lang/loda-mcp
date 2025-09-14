@@ -34,7 +34,9 @@ interface ProgramDetails {
   operations?: string[];
 }
 
-interface EvalResult {
+interface Result {
+  status: "success" | "error";
+  message: string;
   terms: string[];
 }
 
@@ -128,7 +130,7 @@ class LODAApiClient {
     return this.makeRequest(`/programs/search?${params.toString()}`);
   }
 
-  async evalProgram(code: string, t?: number, o?: number): Promise<EvalResult> {
+  async evalProgram(code: string, t?: number, o?: number): Promise<Result> {
     const params = new URLSearchParams();
     if (t !== undefined) params.append('t', String(t));
     if (o !== undefined) params.append('o', String(o));
@@ -139,13 +141,13 @@ class LODAApiClient {
     });
   }
 
-  async submitProgram(id: string, code: string, submitter?: string): Promise<void> {
+  async submitProgram(id: string, code: string, submitter?: string): Promise<Result> {
     let url = `/programs/${id}/submit`;
     if (submitter) {
       const params = new URLSearchParams({ submitter });
       url += `?${params.toString()}`;
     }
-    await this.makeRequest(url, {
+    return this.makeRequest(url, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: code,
@@ -416,9 +418,13 @@ class LODAMCPServer {
       content: [
         {
           type: "text",
-          text: `Result: ${result.terms.join(', ')}`
+          text:
+            result.status === "success"
+              ? `Result: ${result.terms.join(', ')}`
+              : `Error: ${result.message}${result.terms && result.terms.length ? `\nPartial result: ${result.terms.join(', ')}` : ''}`
         }
-      ]
+      ],
+      ...result
     };
   }
 
@@ -430,11 +436,18 @@ class LODAMCPServer {
     if (!code || typeof code !== 'string') {
       throw new McpError(ErrorCode.InvalidParams, "code is required");
     }
-    await this.apiClient.submitProgram(id, code, submitter);
+    const result = await this.apiClient.submitProgram(id, code, submitter);
     return {
       content: [
-        { type: "text", text: `Program submitted for ${id}.` }
-      ]
+        {
+          type: "text",
+          text:
+            result.status === "success"
+              ? `Program submitted for ${id}.` + (result.terms && result.terms.length ? `\nResult: ${result.terms.join(', ')}` : '')
+              : `Error: ${result.message}${result.terms && result.terms.length ? `\nPartial result: ${result.terms.join(', ')}` : ''}`
+        }
+      ],
+      ...result
     };
   }
 
