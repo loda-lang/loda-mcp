@@ -158,7 +158,7 @@ class LODAApiClient {
     return this.makeRequest('/stats/summary');
   }
 
-  async getKeywords(): Promise<{ name: string; description: string }[]> {
+  async getKeywords(): Promise<{ name: string; description: string; numPrograms: number; numSequences: number }[]> {
     return this.makeRequest('/stats/keywords');
   }
 
@@ -469,7 +469,11 @@ class LODAMCPServer {
       content: [
         {
           type: "text",
-          text: keywords.length === 0 ? 'No keywords found.' : keywords.map(k => `${k.name}: ${k.description}`).join('\n')
+          text: keywords.length === 0
+            ? 'No keywords found.'
+            : keywords.map(k =>
+                `${k.name}: ${k.description}\n  Programs: ${k.numPrograms}, Sequences: ${k.numSequences}`
+              ).join('\n')
         }
       ],
       keywords
