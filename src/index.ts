@@ -506,7 +506,7 @@ class LODAMCPServer {
     // Session management for MCP
     const transports: { [sessionId: string]: StreamableHTTPServerTransport } = {};
 
-    app.post('/mcp', async (req, res) => {
+    app.post('/v2/mcp', async (req, res) => {
       const sessionId = req.headers['mcp-session-id'] as string | undefined;
       let transport: StreamableHTTPServerTransport;
 
@@ -538,12 +538,19 @@ class LODAMCPServer {
       const transport = transports[sessionId];
       await transport.handleRequest(req, res);
     };
-    app.get('/mcp', handleSessionRequest);
-    app.delete('/mcp', handleSessionRequest);
-
-    app.listen(port, () => {
-      console.error(`LODA MCP server v2.0.0 running on http://localhost:${port}/mcp`);
-    });
+    app.get('/v2/mcp', handleSessionRequest);
+    app.delete('/v2/mcp', handleSessionRequest);
+      app.listen(port, () => {
+        console.error(`LODA MCP server v2.0.0 running on http://localhost:${port}/v2/mcp`);
+      }).on('error', (err: any) => {
+        if (err.code === 'EADDRINUSE') {
+          console.error(`Error: Port ${port} is already in use or the server is already running.`);
+          process.exit(1);
+        } else {
+          console.error('Server error:', err);
+          process.exit(1);
+        }
+      });
   }
 }
 
