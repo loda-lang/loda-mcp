@@ -32,6 +32,7 @@ interface ProgramDetails {
   submitter?: string | null;
   keywords?: string[];
   operations?: string[];
+  numUsages?: number;
 }
 
 interface Result {
@@ -165,6 +166,10 @@ class LODAApiClient {
   async getSubmitters(): Promise<Submitter[]> {
     return this.makeRequest('/stats/submitters');
   }
+
+  async getProgramUsages(): Promise<{ id: string; numUsages: number }[]> {
+    return this.makeRequest('/stats/programs/numUsages');
+  }
 }
 
 /**
@@ -250,7 +255,7 @@ class LODAMCPServer {
           },
           {
             name: "get_sequence",
-            description: "Retrieve detailed information about an integer sequence, including its terms, references, links, and keywords. The ID must match the sequence (e.g., A000045).",
+            description: "Retrieve detailed information about an integer sequence, including its terms, references, links, and keywords. The ID must match the sequence (e.g. A000045).",
             inputSchema: {
               type: "object",
               properties: {
@@ -288,6 +293,11 @@ class LODAMCPServer {
             name: "get_submitters",
             description: "Returns a list of all submitters with their number of submitted programs.",
             inputSchema: { type: "object", properties: {}, additionalProperties: false }
+          },
+          {
+            name: "get_program_usages",
+            description: "Returns a list of all programs and the number of other programs that use them (calls via seq).",
+            inputSchema: { type: "object", properties: {}, additionalProperties: false }
           }
         ] as Tool[]
       };
@@ -317,6 +327,8 @@ class LODAMCPServer {
             return this.handleGetKeywords();
           case "get_submitters":
             return this.handleGetSubmitters();
+          case "get_program_usages":
+            return this.handleGetProgramUsages();
           default:
             throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
         }
@@ -374,15 +386,20 @@ class LODAMCPServer {
       throw new McpError(ErrorCode.InvalidParams, "id must be a string like A000045");
     }
     const prog = await this.apiClient.getProgram(id);
+    let text = `🔧 Program ${prog.id}: ${prog.name}\n` +
+      `Submitter: ${prog.submitter || 'unknown'}\n` +
+      `Code:\n${prog.code}`;
+    if (typeof prog.numUsages === 'number') {
+      text += `\nNumber of usages: ${prog.numUsages}`;
+    }
     return {
       content: [
         {
           type: "text",
-          text: `🔧 Program ${prog.id}: ${prog.name}\n` +
-            `Submitter: ${prog.submitter || 'unknown'}\n` +
-            `Code:\n${prog.code}`
+          text
         }
-      ]
+      ],
+      numUsages: prog.numUsages
     };
   }
 
@@ -489,6 +506,22 @@ class LODAMCPServer {
           text: submitters.map(s => `${s.name}: ${s.numPrograms} programs`).join('\n')
         }
       ]
+    };
+  }
+
+  private async handleGetProgramUsages() {
+    // API returns array of { id: string, numUsages: number }
+    const usages = await this.apiClient.getProgramUsages();
+    return {
+      content: [
+        {
+          type: "text",
+          text: usages.length === 0
+            ? 'No program usages found.'
+            : usages.map((u: {id: string, numUsages: number}) => `${u.id}: ${u.numUsages} usages`).join('\n')
+        }
+      ],
+      usages
     };
   }
 
