@@ -167,7 +167,7 @@ class LODAApiClient {
     return this.makeRequest('/stats/submitters');
   }
 
-  async getProgramUsages(): Promise<{ id: string; numUsages: number }[]> {
+  async getUsageStats(): Promise<{ id: string; numUsages: number }[]> {
     return this.makeRequest('/stats/programs/numUsages');
   }
 }
@@ -201,8 +201,9 @@ class LODAMCPServer {
       return {
         tools: [
           {
-            name: "get_program",
-            description: "Retrieve detailed information about a LODA program for an integer sequence, including its author and code. The ID must match the sequence (e.g., A000045).",
+            name: "get_program_details",
+            description:
+              "Retrieve detailed information about a LODA program for an integer sequence. The response includes: id, name, code (plain text), submitter, keywords, operations, formula (if available), and usages (IDs of programs that use this one via seq). The ID must match the sequence (e.g., A000045).",
             inputSchema: {
               type: "object",
               properties: {
@@ -295,7 +296,7 @@ class LODAMCPServer {
             inputSchema: { type: "object", properties: {}, additionalProperties: false }
           },
           {
-            name: "get_program_usages",
+            name: "get_usage_stats",
             description: "Returns a list of all programs and the number of other programs that use them (calls via seq).",
             inputSchema: { type: "object", properties: {}, additionalProperties: false }
           }
@@ -309,8 +310,8 @@ class LODAMCPServer {
       const safeArgs = (args && typeof args === 'object') ? args : {};
       try {
         switch (name) {
-          case "get_program":
-            return this.handleGetProgram(safeArgs as { id: string });
+          case "get_program_details":
+            return this.handleGetProgramDetails(safeArgs as { id: string });
           case "search_programs":
             return this.handleSearchPrograms(safeArgs as { q: string; limit?: number; skip?: number });
           case "eval_program":
@@ -327,8 +328,8 @@ class LODAMCPServer {
             return this.handleGetKeywords();
           case "get_submitters":
             return this.handleGetSubmitters();
-          case "get_program_usages":
-            return this.handleGetProgramUsages();
+          case "get_usage_stats":
+            return this.handleGetUsageStats();
           default:
             throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
         }
@@ -380,7 +381,7 @@ class LODAMCPServer {
     };
   }
 
-  private async handleGetProgram(args: { id: string }) {
+  private async handleGetProgramDetails(args: { id: string }) {
     const { id } = args;
     if (!/^A\d{6,}$/.test(id)) {
       throw new McpError(ErrorCode.InvalidParams, "id must be a string like A000045");
@@ -509,9 +510,9 @@ class LODAMCPServer {
     };
   }
 
-  private async handleGetProgramUsages() {
+  private async handleGetUsageStats() {
     // API returns array of { id: string, numUsages: number }
-    const usages = await this.apiClient.getProgramUsages();
+    const usages = await this.apiClient.getUsageStats();
     return {
       content: [
         {
