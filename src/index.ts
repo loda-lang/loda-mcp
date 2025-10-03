@@ -32,7 +32,7 @@ interface ProgramDetails {
   submitter?: string | null;
   keywords?: string[];
   operations?: string[];
-  numUsages?: number;
+  usages?: string[];
 }
 
 interface Result {
@@ -389,8 +389,8 @@ class LODAMCPServer {
     let text = `🔧 Program ${prog.id}: ${prog.name}\n` +
       `Submitter: ${prog.submitter || 'unknown'}\n` +
       `Code:\n${prog.code}`;
-    if (typeof prog.numUsages === 'number') {
-      text += `\nNumber of usages: ${prog.numUsages}`;
+    if (Array.isArray(prog.usages) && prog.usages.length > 0) {
+      text += `\nUsages: ${prog.usages.join(', ')}`;
     }
     return {
       content: [
@@ -399,7 +399,7 @@ class LODAMCPServer {
           text
         }
       ],
-      numUsages: prog.numUsages
+      usages: prog.usages
     };
   }
 
