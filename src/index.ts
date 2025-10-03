@@ -243,12 +243,13 @@ class LODAMCPServer {
           },
           {
             name: "submit_program",
-            description: "Submit a new LODA program for a sequence. The request body should contain the program code as text/plain. The ID must match the sequence (e.g., A000045).",
+            description: "Submit a new LODA program for a sequence. The request body should contain the program code as text/plain. The ID must match the sequence (e.g., A000045). Optionally, you can specify the submitter (name of the user submitting the program) via the submitter parameter.",
             inputSchema: {
               type: "object",
               properties: {
                 id: { type: "string", description: "ID of the sequence/program (e.g. A000045)" },
-                code: { type: "string", description: "LODA program code in plain text format." }
+                code: { type: "string", description: "LODA program code in plain text format." },
+                submitter: { type: "string", description: "(Optional) Name of the user submitting the program." }
               },
               required: ["id", "code"],
               additionalProperties: false
@@ -317,7 +318,7 @@ class LODAMCPServer {
           case "eval_program":
             return this.handleEvalProgram(safeArgs as { code: string; t?: number; o?: number });
           case "submit_program":
-            return this.handleSubmitProgram(safeArgs as { id: string; code: string });
+            return this.handleSubmitProgram(safeArgs as { id: string; code: string; submitter?: string });
           case "get_sequence":
             return this.handleGetSequence(safeArgs as { id: string });
           case "search_sequences":
