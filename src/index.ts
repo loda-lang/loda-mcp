@@ -215,7 +215,19 @@ class LODAMCPServer {
           },
           {
             name: "search_programs",
-            description: "Search for LODA programs by name, ID, keywords, and other criteria. Supports advanced queries and pagination.",
+            description:
+              "Search for LODA programs using flexible criteria. Supports pagination.\n" +
+              "\nSupported search criteria:\n" +
+              "- Name: Matches tokens in the program name (case-insensitive).\n" +
+              "- ID: Matches tokens in the program ID (e.g., A000045).\n" +
+              "- Keywords: Include keywords by specifying them in the query (e.g., 'core easy'). Exclude keywords by prefixing with a minus sign (e.g., '-hard').\n" +
+              "- Submitter: Matches tokens in the submitter's name (case-insensitive).\n" +
+              "- Advanced: All tokens in the query must be present in either the program name or submitter name. Keywords are handled as described above.\n" +
+              "\nExample queries:\n" +
+              "- 'Fibonacci core' (programs with 'Fibonacci' in the name and the 'core' keyword)\n" +
+              "- 'Alice' (programs submitted by Alice)\n" +
+              "- '-hard' (exclude programs with the 'hard' keyword)\n" +
+              "- 'A000045' (program with ID A000045)",
             inputSchema: {
               type: "object",
               properties: {
@@ -269,7 +281,19 @@ class LODAMCPServer {
           },
           {
             name: "search_sequences",
-            description: "Search for integer sequences by name, ID, keywords, and other criteria. Supports advanced queries and pagination.",
+            description:
+              "Search for integer sequences using flexible criteria. Supports pagination.\n" +
+              "\nSupported search criteria:\n" +
+              "- Name: Matches tokens in the sequence name (case-insensitive).\n" +
+              "- ID: Matches tokens in the sequence ID (e.g., A000045).\n" +
+              "- Keywords: Include keywords by specifying them in the query (e.g., 'core easy'). Exclude keywords by prefixing with a minus sign (e.g., '-hard').\n" +
+              "- Submitter: Matches tokens in the submitter's name of the corresponding LODA program (case-insensitive).\n" +
+              "- Advanced: All tokens in the query must be present in either the sequence name or submitter name. Keywords are handled as described above.\n" +
+              "\nExample queries:\n" +
+              "- 'Fibonacci core' (sequences with 'Fibonacci' in the name and the 'core' keyword)\n" +
+              "- 'Alice' (sequences with programs submitted by Alice)\n" +
+              "- '-hard' (exclude sequences with the 'hard' keyword)\n" +
+              "- 'A000045' (sequence with ID A000045)",
             inputSchema: {
               type: "object",
               properties: {
