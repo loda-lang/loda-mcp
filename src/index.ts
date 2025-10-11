@@ -41,6 +41,12 @@ interface Result {
   terms: string[];
 }
 
+interface ExportResult {
+  status: "success" | "error";
+  message: string;
+  output: string;
+}
+
 interface StatsSummary {
   numSequences: number;
   numPrograms: number;
@@ -136,6 +142,16 @@ class LODAApiClient {
     if (t !== undefined) params.append('t', String(t));
     if (o !== undefined) params.append('o', String(o));
     return this.makeRequest(`/programs/eval${params.size ? '?' + params.toString() : ''}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: code,
+    });
+  }
+
+  async exportProgram(code: string, format?: string): Promise<ExportResult> {
+    const params = new URLSearchParams();
+    if (format !== undefined) params.append('format', format);
+    return this.makeRequest(`/programs/export${params.size ? '?' + params.toString() : ''}`, {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain' },
       body: code,
@@ -254,6 +270,19 @@ class LODAMCPServer {
             }
           },
           {
+            name: "export_program",
+            description: "Export a LODA program to different formats (formula, pari, loda, range). The default format is 'formula'.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                code: { type: "string", description: "LODA program code in plain text format." },
+                format: { type: "string", description: "Export format: formula, pari, loda, or range. Default is 'formula'.", enum: ["formula", "pari", "loda", "range"] }
+              },
+              required: ["code"],
+              additionalProperties: false
+            }
+          },
+          {
             name: "submit_program",
             description: "Submit a new LODA program for a sequence. The request body should contain the program code as text/plain. The ID must match the sequence (e.g., A000045). Optionally, you can specify the submitter (name of the user submitting the program) via the submitter parameter.",
             inputSchema: {
@@ -342,6 +371,8 @@ class LODAMCPServer {
             return this.handleSearchPrograms(safeArgs as { q: string; limit?: number; skip?: number });
           case "eval_program":
             return this.handleEvalProgram(safeArgs as { code: string; t?: number; o?: number });
+          case "export_program":
+            return this.handleExportProgram(safeArgs as { code: string; format?: string });
           case "submit_program":
             return this.handleSubmitProgram(safeArgs as { id: string; code: string; submitter?: string });
           case "get_sequence":
@@ -467,6 +498,26 @@ class LODAMCPServer {
             result.status === "success"
               ? `Result: ${result.terms.join(', ')}`
               : `Error: ${result.message}${result.terms && result.terms.length ? `\nPartial result: ${result.terms.join(', ')}` : ''}`
+        }
+      ],
+      ...result
+    };
+  }
+
+  private async handleExportProgram(args: { code: string; format?: string }) {
+    const { code, format } = args;
+    if (!code || typeof code !== 'string') {
+      throw new McpError(ErrorCode.InvalidParams, "code is required");
+    }
+    const result = await this.apiClient.exportProgram(code, format);
+    return {
+      content: [
+        {
+          type: "text",
+          text:
+            result.status === "success"
+              ? `Export result (${format || 'formula'}):\n${result.output}`
+              : `Error: ${result.message}`
         }
       ],
       ...result
