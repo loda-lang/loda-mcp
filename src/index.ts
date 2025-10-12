@@ -117,10 +117,11 @@ class LODAApiClient {
     return this.makeRequest(`/sequences/${id}`);
   }
 
-  async searchSequences(q: string, limit?: number, skip?: number): Promise<{ total: number; results: { id: string; name: string; keywords?: string[] }[] }> {
+  async searchSequences(q: string, limit?: number, skip?: number, shuffle?: boolean): Promise<{ total: number; results: { id: string; name: string; keywords?: string[] }[] }> {
     const params = new URLSearchParams({ q });
     if (limit !== undefined) params.append('limit', String(limit));
     if (skip !== undefined) params.append('skip', String(skip));
+    if (shuffle !== undefined) params.append('shuffle', String(shuffle));
     // The API returns { total, results: [{id, name, keywords?}] }
     return this.makeRequest(`/sequences/search?${params.toString()}`);
   }
@@ -129,10 +130,11 @@ class LODAApiClient {
     return this.makeRequest(`/programs/${id}`);
   }
 
-  async searchPrograms(q: string, limit?: number, skip?: number): Promise<{ total: number; results: { id: string; name: string; keywords?: string[] }[] }> {
+  async searchPrograms(q: string, limit?: number, skip?: number, shuffle?: boolean): Promise<{ total: number; results: { id: string; name: string; keywords?: string[] }[] }> {
     const params = new URLSearchParams({ q });
     if (limit !== undefined) params.append('limit', String(limit));
     if (skip !== undefined) params.append('skip', String(skip));
+    if (shuffle !== undefined) params.append('shuffle', String(shuffle));
     // The API returns { total, results: [{id, name, keywords?}] }
     return this.makeRequest(`/programs/search?${params.toString()}`);
   }
@@ -249,7 +251,8 @@ class LODAMCPServer {
               properties: {
                 q: { type: "string", description: "Search query supporting keywords, properties, submitters, and advanced criteria. To require a keyword, include it; to exclude, prefix with '-' (e.g., -core)." },
                 limit: { type: "number", description: "Maximum number of results to return (pagination limit)", minimum: 1, maximum: 100 },
-                skip: { type: "number", description: "Number of items to skip before starting to collect the result set (pagination offset)", minimum: 0 }
+                skip: { type: "number", description: "Number of items to skip before starting to collect the result set (pagination offset)", minimum: 0 },
+                shuffle: { type: "boolean", description: "If set to true, the search results will be shuffled randomly" }
               },
               required: ["q"],
               additionalProperties: false
@@ -329,7 +332,8 @@ class LODAMCPServer {
               properties: {
                 q: { type: "string", description: "Search query supporting keywords, properties, submitters, and advanced criteria. To require a keyword, include it; to exclude, prefix with '-' (e.g., -core)." },
                 limit: { type: "number", description: "Maximum number of results to return (pagination limit)", minimum: 1, maximum: 100 },
-                skip: { type: "number", description: "Number of items to skip before starting to collect the result set (pagination offset)", minimum: 0 }
+                skip: { type: "number", description: "Number of items to skip before starting to collect the result set (pagination offset)", minimum: 0 },
+                shuffle: { type: "boolean", description: "If set to true, the search results will be shuffled randomly" }
               },
               required: ["q"],
               additionalProperties: false
@@ -368,7 +372,7 @@ class LODAMCPServer {
           case "get_program_details":
             return this.handleGetProgramDetails(safeArgs as { id: string });
           case "search_programs":
-            return this.handleSearchPrograms(safeArgs as { q: string; limit?: number; skip?: number });
+            return this.handleSearchPrograms(safeArgs as { q: string; limit?: number; skip?: number; shuffle?: boolean });
           case "eval_program":
             return this.handleEvalProgram(safeArgs as { code: string; t?: number; o?: number });
           case "export_program":
@@ -378,7 +382,7 @@ class LODAMCPServer {
           case "get_sequence":
             return this.handleGetSequence(safeArgs as { id: string });
           case "search_sequences":
-            return this.handleSearchSequences(safeArgs as { q: string; limit?: number; skip?: number });
+            return this.handleSearchSequences(safeArgs as { q: string; limit?: number; skip?: number; shuffle?: boolean });
           case "get_stats":
             return this.handleGetStats();
           case "get_keywords":
@@ -417,12 +421,12 @@ class LODAMCPServer {
     };
   }
 
-  private async handleSearchSequences(args: { q: string; limit?: number; skip?: number }) {
-    const { q, limit, skip } = args;
+  private async handleSearchSequences(args: { q: string; limit?: number; skip?: number; shuffle?: boolean }) {
+    const { q, limit, skip, shuffle } = args;
     if (!q || typeof q !== 'string') {
       throw new McpError(ErrorCode.InvalidParams, "q is required");
     }
-    const result = await this.apiClient.searchSequences(q, limit, skip);
+    const result = await this.apiClient.searchSequences(q, limit, skip, shuffle);
     return {
       content: [
         {
@@ -462,12 +466,12 @@ class LODAMCPServer {
     };
   }
 
-  private async handleSearchPrograms(args: { q: string; limit?: number; skip?: number }) {
-    const { q, limit, skip } = args;
+  private async handleSearchPrograms(args: { q: string; limit?: number; skip?: number; shuffle?: boolean }) {
+    const { q, limit, skip, shuffle } = args;
     if (!q || typeof q !== 'string') {
       throw new McpError(ErrorCode.InvalidParams, "q is required");
     }
-    const result = await this.apiClient.searchPrograms(q, limit, skip);
+    const result = await this.apiClient.searchPrograms(q, limit, skip, shuffle);
     return {
       content: [
         {
