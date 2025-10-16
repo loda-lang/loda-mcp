@@ -274,12 +274,12 @@ class LODAMCPServer {
           },
           {
             name: "export_program",
-            description: "Export a LODA program to different formats (formula, pari, loda, range). The default format is 'formula'.",
+            description: "Export a LODA program to different formats (formula, pari, lean, loda, range). The default format is 'formula'.",
             inputSchema: {
               type: "object",
               properties: {
                 code: { type: "string", description: "LODA program code in plain text format." },
-                format: { type: "string", description: "Export format: formula, pari, loda, or range. Default is 'formula'.", enum: ["formula", "pari", "loda", "range"] }
+                format: { type: "string", description: "Export format: formula, pari, lean, loda, or range. Default is 'formula'.", enum: ["formula", "pari", "lean", "loda", "range"] }
               },
               required: ["code"],
               additionalProperties: false
