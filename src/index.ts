@@ -239,13 +239,15 @@ class LODAMCPServer {
               "- Name: Matches tokens in the program name (case-insensitive).\n" +
               "- ID: Matches tokens in the program ID (e.g., A000045).\n" +
               "- Keywords: Include keywords by specifying them in the query (e.g., 'core easy'). Exclude keywords by prefixing with a minus sign (e.g., '-hard').\n" +
+              "- Operation Types: Include operation types (opcodes) to match in the LODA program (e.g., `mov add`). Exclude operation types by prefixing with a minus sign (e.g., `-mul`).\n" +
               "- Submitter: Matches tokens in the submitter's name (case-insensitive).\n" +
-              "- Advanced: All tokens in the query must be present in either the program name or submitter name. Keywords are handled as described above.\n" +
+              "- Advanced: All tokens in the query must be present in either the program name or submitter name. Keywords and operation types are handled as described above.\n" +
               "\nExample queries:\n" +
               "- 'Fibonacci core' (programs with 'Fibonacci' in the name and the 'core' keyword)\n" +
+              "- 'A000045' (program with ID A000045)" +
               "- 'Alice' (programs submitted by Alice)\n" +
               "- '-hard' (exclude programs with the 'hard' keyword)\n" +
-              "- 'A000045' (program with ID A000045)",
+              "- 'bin' (include programs with 'bin' operations)\n",
             inputSchema: {
               type: "object",
               properties: {
@@ -319,14 +321,15 @@ class LODAMCPServer {
               "- Name: Matches tokens in the sequence name (case-insensitive).\n" +
               "- ID: Matches tokens in the sequence ID (e.g., A000045).\n" +
               "- Keywords: Include keywords by specifying them in the query (e.g., 'core easy'). Exclude keywords by prefixing with a minus sign (e.g., '-hard').\n" +
+              "- Operation Types: Include operation types (opcodes) of the corresponding LODA program (e.g., `mov add`). Exclude operation types by prefixing with a minus sign (e.g., `-mul`).\n" +
               "- Author: Matches tokens in the author names (case-insensitive).\n" +
               "- Submitter: Matches tokens in the submitter names of the corresponding LODA programs (case-insensitive).\n" +
               "- Advanced: All tokens in the query must be present in either the sequence name, author name, or submitter name. Keywords are handled as described above.\n" +
               "\nExample queries:\n" +
               "- 'Fibonacci core' (sequences with 'Fibonacci' in the name and the 'core' keyword)\n" +
+              "- 'A000045' (sequence with ID A000045)" +
               "- 'Alice' (sequences authored by Alice or with programs submitted by Alice)\n" +
-              "- '-hard' (exclude sequences with the 'hard' keyword)\n" +
-              "- 'A000045' (sequence with ID A000045)",
+              "- '-hard' (exclude sequences with the 'hard' keyword)\n",
             inputSchema: {
               type: "object",
               properties: {
