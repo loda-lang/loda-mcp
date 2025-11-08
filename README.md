@@ -2,6 +2,10 @@
 
 A Model Context Protocol (MCP) server for the LODA Language API, providing seamless access to the LODA language and integer sequences from the On-Line Encyclopedia of Integer Sequences® (OEIS®).
 
+<a href="https://glama.ai/mcp/servers/@loda-lang/loda-mcp">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/@loda-lang/loda-mcp/badge" alt="LODA API Server MCP server" />
+</a>
+
 ## Available Tools
 
 | Tool | Description | Primary Use Case |
