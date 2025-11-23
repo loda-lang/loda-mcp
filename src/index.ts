@@ -47,6 +47,20 @@ interface ExportResult {
   output: string;
 }
 
+interface Submission {
+  id: string;
+  submitter: string;
+  content: string;
+  mode: "add" | "update" | "delete";
+  type: "program" | "sequence";
+}
+
+interface SubmissionsResult {
+  session: number;
+  total: number;
+  results: Submission[];
+}
+
 interface StatsSummary {
   numSequences: number;
   numPrograms: number;
@@ -160,16 +174,21 @@ class LODAApiClient {
     });
   }
 
-  async submitProgram(id: string, code: string, submitter?: string): Promise<Result> {
-    let url = `/programs/${id}/submit`;
-    if (submitter) {
-      const params = new URLSearchParams({ submitter });
-      url += `?${params.toString()}`;
-    }
-    return this.makeRequest(url, {
+  async getSubmissions(limit?: number, skip?: number, mode?: string, type?: string, submitter?: string): Promise<SubmissionsResult> {
+    const params = new URLSearchParams();
+    if (limit !== undefined) params.append('limit', String(limit));
+    if (skip !== undefined) params.append('skip', String(skip));
+    if (mode !== undefined) params.append('mode', mode);
+    if (type !== undefined) params.append('type', type);
+    if (submitter !== undefined) params.append('submitter', submitter);
+    return this.makeRequest(`/submissions${params.size ? '?' + params.toString() : ''}`);
+  }
+
+  async createSubmission(submission: Submission): Promise<{ status: string; message: string }> {
+    return this.makeRequest('/submissions', {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: code,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(submission),
     });
   }
 
@@ -288,16 +307,33 @@ class LODAMCPServer {
             }
           },
           {
-            name: "submit_program",
-            description: "Submit a new LODA program for a sequence. The request body should contain the program code as text/plain. The ID must match the sequence (e.g., A000045). Optionally, you can specify the submitter (name of the user submitting the program) via the submitter parameter.",
+            name: "get_submissions",
+            description: "Retrieve a paginated list of submissions. Returns all submissions including programs and sequences with support for pagination and filtering by mode (add/update/delete), type (program/sequence), and submitter.",
             inputSchema: {
               type: "object",
               properties: {
-                id: { type: "string", description: "ID of the sequence/program (e.g. A000045)" },
-                code: { type: "string", description: "LODA program code in plain text format." },
-                submitter: { type: "string", description: "(Optional) Name of the user submitting the program." }
+                limit: { type: "number", description: "Maximum number of results to return (pagination limit)", minimum: 1, maximum: 100 },
+                skip: { type: "number", description: "Number of items to skip before starting to collect the result set (pagination offset)", minimum: 0 },
+                mode: { type: "string", description: "Filter submissions by mode", enum: ["add", "update", "delete"] },
+                type: { type: "string", description: "Filter submissions by object type", enum: ["program", "sequence"] },
+                submitter: { type: "string", description: "Filter submissions by submitter name" }
               },
-              required: ["id", "code"],
+              additionalProperties: false
+            }
+          },
+          {
+            name: "submit",
+            description: "Submit a new program or sequence. Currently only program submissions are supported. Submission modes: add (new program/sequence), update (modify existing), delete (remove). Object types: program (LODA program), sequence (integer sequence - not yet supported).",
+            inputSchema: {
+              type: "object",
+              properties: {
+                id: { type: "string", description: "ID of the program or sequence (e.g. A000045)" },
+                submitter: { type: "string", description: "Name of the person submitting" },
+                content: { type: "string", description: "Content of the submission (program code or sequence data)" },
+                mode: { type: "string", description: "Type of submission operation", enum: ["add", "update", "delete"] },
+                type: { type: "string", description: "Type of object being submitted", enum: ["program", "sequence"] }
+              },
+              required: ["id", "submitter", "content", "mode", "type"],
               additionalProperties: false
             }
           },
@@ -380,8 +416,10 @@ class LODAMCPServer {
             return this.handleEvalProgram(safeArgs as { code: string; t?: number; o?: number });
           case "export_program":
             return this.handleExportProgram(safeArgs as { code: string; format?: string });
-          case "submit_program":
-            return this.handleSubmitProgram(safeArgs as { id: string; code: string; submitter?: string });
+          case "get_submissions":
+            return this.handleGetSubmissions(safeArgs as { limit?: number; skip?: number; mode?: string; type?: string; submitter?: string });
+          case "submit":
+            return this.handleSubmit(safeArgs as { id: string; submitter: string; content: string; mode: string; type: string });
           case "get_sequence":
             return this.handleGetSequence(safeArgs as { id: string });
           case "search_sequences":
@@ -531,23 +569,51 @@ class LODAMCPServer {
     };
   }
 
-  private async handleSubmitProgram(args: { id: string; code: string; submitter?: string }) {
-    const { id, code, submitter } = args;
-    if (!/^A\d{6,}$/.test(id)) {
+  private async handleGetSubmissions(args: { limit?: number; skip?: number; mode?: string; type?: string; submitter?: string }) {
+    const { limit, skip, mode, type, submitter } = args;
+    const result = await this.apiClient.getSubmissions(limit, skip, mode, type, submitter);
+    return {
+      content: [
+        {
+          type: "text",
+          text: result.results.length === 0
+            ? 'No submissions found.'
+            : result.results.map((s: Submission) =>
+                `${s.id} (${s.mode}/${s.type}) by ${s.submitter}:\n${s.content.slice(0, 100)}${s.content.length > 100 ? '...' : ''}`
+              ).join('\n\n') +
+              `\n\nTotal: ${result.total}, Session: ${new Date(result.session * 1000).toISOString()}`
+        }
+      ],
+      ...result
+    };
+  }
+
+  private async handleSubmit(args: { id: string; submitter: string; content: string; mode: string; type: string }) {
+    const { id, submitter, content, mode, type } = args;
+    if (!/^[A-Z]\d{1,10}$/.test(id)) {
       throw new McpError(ErrorCode.InvalidParams, "id must be a string like A000045");
     }
-    if (!code || typeof code !== 'string') {
-      throw new McpError(ErrorCode.InvalidParams, "code is required");
+    if (!submitter || typeof submitter !== 'string') {
+      throw new McpError(ErrorCode.InvalidParams, "submitter is required");
     }
-    const result = await this.apiClient.submitProgram(id, code, submitter);
+    if (!content || typeof content !== 'string') {
+      throw new McpError(ErrorCode.InvalidParams, "content is required");
+    }
+    if (!['add', 'update', 'delete'].includes(mode)) {
+      throw new McpError(ErrorCode.InvalidParams, "mode must be 'add', 'update', or 'delete'");
+    }
+    if (!['program', 'sequence'].includes(type)) {
+      throw new McpError(ErrorCode.InvalidParams, "type must be 'program' or 'sequence'");
+    }
+    const result = await this.apiClient.createSubmission({ id, submitter, content, mode: mode as "add" | "update" | "delete", type: type as "program" | "sequence" });
     return {
       content: [
         {
           type: "text",
           text:
             result.status === "success"
-              ? `Program submitted for ${id}.` + (result.terms && result.terms.length ? `\nResult: ${result.terms.join(', ')}` : '')
-              : `Error: ${result.message}${result.terms && result.terms.length ? `\nPartial result: ${result.terms.join(', ')}` : ''}`
+              ? `Submission successful for ${id} (${mode}/${type})`
+              : `Error: ${result.message}`
         }
       ],
       ...result
