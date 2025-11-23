@@ -49,7 +49,7 @@ interface ExportResult {
 
 interface Submission {
   id: string;
-  mode: "add" | "update" | "delete";
+  mode: "add" | "update" | "remove";
   type: "program" | "sequence";
   content?: string;
   submitter?: string;
@@ -308,13 +308,13 @@ class LODAMCPServer {
           },
           {
             name: "get_submissions",
-            description: "Retrieve a paginated list of submissions. Returns all submissions including programs and sequences with support for pagination and filtering by mode (add/update/delete), type (program/sequence), and submitter.",
+            description: "Retrieve a paginated list of submissions. Returns all submissions including programs and sequences with support for pagination and filtering by mode (add/update/remove), type (program/sequence), and submitter.",
             inputSchema: {
               type: "object",
               properties: {
                 limit: { type: "number", description: "Maximum number of results to return (pagination limit)", minimum: 1, maximum: 100 },
                 skip: { type: "number", description: "Number of items to skip before starting to collect the result set (pagination offset)", minimum: 0 },
-                mode: { type: "string", description: "Filter submissions by mode", enum: ["add", "update", "delete"] },
+                mode: { type: "string", description: "Filter submissions by mode", enum: ["add", "update", "remove"] },
                 type: { type: "string", description: "Filter submissions by object type", enum: ["program", "sequence"] },
                 submitter: { type: "string", description: "Filter submissions by submitter name" }
               },
@@ -323,14 +323,14 @@ class LODAMCPServer {
           },
           {
             name: "submit",
-            description: "Submit a new program or sequence. Currently only program submissions are supported. Submission modes: add (new program/sequence), update (modify existing), delete (remove). Object types: program (LODA program), sequence (integer sequence - not yet supported). Note: content is not required when mode is 'delete'.",
+            description: "Submit a new program or sequence. Currently only program submissions are supported. Submission modes: add (new program/sequence), update (modify existing), remove (delete). Object types: program (LODA program), sequence (integer sequence - not yet supported). Note: content is not required when mode is 'remove'.",
             inputSchema: {
               type: "object",
               properties: {
                 id: { type: "string", description: "ID of the program or sequence (e.g. A000045)" },
                 submitter: { type: "string", description: "(Optional) Name of the person submitting" },
-                content: { type: "string", description: "Content of the submission (program code or sequence data). Not required when mode is 'delete'." },
-                mode: { type: "string", description: "Type of submission operation", enum: ["add", "update", "delete"] },
+                content: { type: "string", description: "Content of the submission (program code or sequence data). Not required when mode is 'remove'." },
+                mode: { type: "string", description: "Type of submission operation", enum: ["add", "update", "remove"] },
                 type: { type: "string", description: "Type of object being submitted", enum: ["program", "sequence"] }
               },
               required: ["id", "mode", "type"],
@@ -595,19 +595,19 @@ class LODAMCPServer {
     if (!/^[A-Z]\d{1,10}$/.test(id)) {
       throw new McpError(ErrorCode.InvalidParams, "id must be a string like A000045");
     }
-    if (!['add', 'update', 'delete'].includes(mode)) {
-      throw new McpError(ErrorCode.InvalidParams, "mode must be 'add', 'update', or 'delete'");
+    if (!['add', 'update', 'remove'].includes(mode)) {
+      throw new McpError(ErrorCode.InvalidParams, "mode must be 'add', 'update', or 'remove'");
     }
     if (!['program', 'sequence'].includes(type)) {
       throw new McpError(ErrorCode.InvalidParams, "type must be 'program' or 'sequence'");
     }
-    // Content is required for add and update, but not for delete
-    if (mode !== 'delete' && (!content || typeof content !== 'string')) {
+    // Content is required for add and update, but not for remove
+    if (mode !== 'remove' && (!content || typeof content !== 'string')) {
       throw new McpError(ErrorCode.InvalidParams, "content is required for add and update operations");
     }
     const submission: Submission = {
       id,
-      mode: mode as "add" | "update" | "delete",
+      mode: mode as "add" | "update" | "remove",
       type: type as "program" | "sequence"
     };
     if (submitter !== undefined) submission.submitter = submitter;
