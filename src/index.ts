@@ -49,10 +49,10 @@ interface ExportResult {
 
 interface Submission {
   id: string;
-  submitter?: string;
-  content?: string;
   mode: "add" | "update" | "delete";
   type: "program" | "sequence";
+  content?: string;
+  submitter?: string;
 }
 
 interface SubmissionsResult {
