@@ -49,8 +49,8 @@ interface ExportResult {
 
 interface Submission {
   id: string;
-  submitter: string;
-  content: string;
+  submitter?: string;
+  content?: string;
   mode: "add" | "update" | "delete";
   type: "program" | "sequence";
 }
@@ -323,17 +323,17 @@ class LODAMCPServer {
           },
           {
             name: "submit",
-            description: "Submit a new program or sequence. Currently only program submissions are supported. Submission modes: add (new program/sequence), update (modify existing), delete (remove). Object types: program (LODA program), sequence (integer sequence - not yet supported).",
+            description: "Submit a new program or sequence. Currently only program submissions are supported. Submission modes: add (new program/sequence), update (modify existing), delete (remove). Object types: program (LODA program), sequence (integer sequence - not yet supported). Note: content is not required when mode is 'delete'.",
             inputSchema: {
               type: "object",
               properties: {
                 id: { type: "string", description: "ID of the program or sequence (e.g. A000045)" },
-                submitter: { type: "string", description: "Name of the person submitting" },
-                content: { type: "string", description: "Content of the submission (program code or sequence data)" },
+                submitter: { type: "string", description: "(Optional) Name of the person submitting" },
+                content: { type: "string", description: "Content of the submission (program code or sequence data). Not required when mode is 'delete'." },
                 mode: { type: "string", description: "Type of submission operation", enum: ["add", "update", "delete"] },
                 type: { type: "string", description: "Type of object being submitted", enum: ["program", "sequence"] }
               },
-              required: ["id", "submitter", "content", "mode", "type"],
+              required: ["id", "mode", "type"],
               additionalProperties: false
             }
           },
@@ -578,9 +578,11 @@ class LODAMCPServer {
           type: "text",
           text: result.results.length === 0
             ? 'No submissions found.'
-            : result.results.map((s: Submission) =>
-                `${s.id} (${s.mode}/${s.type}) by ${s.submitter}:\n${s.content.slice(0, 100)}${s.content.length > 100 ? '...' : ''}`
-              ).join('\n\n') +
+            : result.results.map((s: Submission) => {
+                const submitterText = s.submitter ? ` by ${s.submitter}` : '';
+                const contentPreview = s.content ? `:\n${s.content.slice(0, 100)}${s.content.length > 100 ? '...' : ''}` : '';
+                return `${s.id} (${s.mode}/${s.type})${submitterText}${contentPreview}`;
+              }).join('\n\n') +
               `\n\nTotal: ${result.total}, Session: ${new Date(result.session * 1000).toISOString()}`
         }
       ],
@@ -588,16 +590,10 @@ class LODAMCPServer {
     };
   }
 
-  private async handleSubmit(args: { id: string; submitter: string; content: string; mode: string; type: string }) {
+  private async handleSubmit(args: { id: string; submitter?: string; content?: string; mode: string; type: string }) {
     const { id, submitter, content, mode, type } = args;
     if (!/^[A-Z]\d{1,10}$/.test(id)) {
       throw new McpError(ErrorCode.InvalidParams, "id must be a string like A000045");
-    }
-    if (!submitter || typeof submitter !== 'string') {
-      throw new McpError(ErrorCode.InvalidParams, "submitter is required");
-    }
-    if (!content || typeof content !== 'string') {
-      throw new McpError(ErrorCode.InvalidParams, "content is required");
     }
     if (!['add', 'update', 'delete'].includes(mode)) {
       throw new McpError(ErrorCode.InvalidParams, "mode must be 'add', 'update', or 'delete'");
@@ -605,7 +601,18 @@ class LODAMCPServer {
     if (!['program', 'sequence'].includes(type)) {
       throw new McpError(ErrorCode.InvalidParams, "type must be 'program' or 'sequence'");
     }
-    const result = await this.apiClient.createSubmission({ id, submitter, content, mode: mode as "add" | "update" | "delete", type: type as "program" | "sequence" });
+    // Content is required for add and update, but not for delete
+    if (mode !== 'delete' && (!content || typeof content !== 'string')) {
+      throw new McpError(ErrorCode.InvalidParams, "content is required for add and update operations");
+    }
+    const submission: Submission = {
+      id,
+      mode: mode as "add" | "update" | "delete",
+      type: type as "program" | "sequence"
+    };
+    if (submitter !== undefined) submission.submitter = submitter;
+    if (content !== undefined) submission.content = content;
+    const result = await this.apiClient.createSubmission(submission);
     return {
       content: [
         {
