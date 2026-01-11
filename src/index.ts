@@ -215,6 +215,30 @@ class LODAApiClient {
   async getUsageStats(): Promise<{ id: string; numUsages: number }[]> {
     return this.makeRequest('/stats/programs/numUsages');
   }
+
+  async downloadOeisDataFile(filename: string): Promise<Buffer> {
+    const url = `${this.baseUrl}/sequences/data/oeis/${filename}`;
+    const response = await fetch(url, {
+      headers: {
+        'Accept': 'application/gzip',
+        'User-Agent': 'loda-mcp/1.0.0',
+      },
+    });
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorBody = await response.text();
+        if (errorBody) {
+          errorMessage += ` - ${errorBody}`;
+        }
+      } catch (e) {}
+      throw new McpError(
+        ErrorCode.InternalError,
+        `LODA API request failed: ${errorMessage}`
+      );
+    }
+    return Buffer.from(await response.arrayBuffer());
+  }
 }
 
 /**
@@ -417,6 +441,18 @@ class LODAMCPServer {
             name: "get_usage_stats",
             description: "Returns a list of all programs and the number of other programs that use them (calls via seq).",
             inputSchema: { type: "object", properties: {}, additionalProperties: false }
+          },
+          {
+            name: "download_oeis_data_file",
+            description: "Download a gzip-compressed OEIS data file. Available files include: names.gz, stripped.gz, authors.gz, comments.gz, formulas.gz, keywords.gz, offsets.gz, programs.gz, or b-files (b{xxxxxx}.txt.gz where {xxxxxx} is a 6-digit sequence number).",
+            inputSchema: {
+              type: "object",
+              properties: {
+                filename: { type: "string", description: "OEIS data filename (e.g., names.gz, stripped.gz, or b000045.txt.gz)" }
+              },
+              required: ["filename"],
+              additionalProperties: false
+            }
           }
         ] as Tool[]
       };
@@ -454,6 +490,8 @@ class LODAMCPServer {
             return this.handleGetSubmitters();
           case "get_usage_stats":
             return this.handleGetUsageStats();
+          case "download_oeis_data_file":
+            return this.handleDownloadOeisDataFile(safeArgs as { filename: string });
           default:
             throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
         }
@@ -726,6 +764,32 @@ class LODAMCPServer {
         }
       ],
       usages
+    };
+  }
+
+  private async handleDownloadOeisDataFile(args: { filename: string }) {
+    const { filename } = args;
+    // Validate filename format
+    const validPattern = /^(names|stripped|authors|comments|formulas|keywords|offsets|programs)\.gz$|^b\d{6}\.txt\.gz$/;
+    if (!validPattern.test(filename)) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        "Invalid filename format. Use names.gz, stripped.gz, authors.gz, comments.gz, formulas.gz, keywords.gz, offsets.gz, programs.gz, or b{xxxxxx}.txt.gz"
+      );
+    }
+    const buffer = await this.apiClient.downloadOeisDataFile(filename);
+    return {
+      content: [
+        {
+          type: "text",
+          text: `Downloaded ${filename} (${buffer.length} bytes) - base64 encoded data follows`,
+          mimeType: "application/gzip"
+        },
+        {
+          type: "text",
+          text: buffer.toString('base64')
+        }
+      ]
     };
   }
 
