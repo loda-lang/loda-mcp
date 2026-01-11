@@ -131,6 +131,14 @@ class LODAApiClient {
     return this.makeRequest(`/sequences/${id}`);
   }
 
+  async triggerSequenceRefresh(id: string): Promise<{ status: string; message: string }> {
+    return this.makeRequest(`/sequences/${id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '',
+    });
+  }
+
   async searchSequences(q: string, limit?: number, skip?: number, shuffle?: boolean): Promise<{ total: number; results: { id: string; name: string; keywords?: string[] }[] }> {
     const params = new URLSearchParams({ q });
     if (limit !== undefined) params.append('limit', String(limit));
@@ -350,6 +358,18 @@ class LODAMCPServer {
             }
           },
           {
+            name: "refresh_sequence",
+            description: "Trigger a refresh of sequence data from OEIS. Adds the OEIS sequence ID to the crawler's queue to fetch updated data asynchronously. The request body must be empty.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                id: { type: "string", description: "ID of the integer sequence to refresh (e.g. A000045)" }
+              },
+              required: ["id"],
+              additionalProperties: false
+            }
+          },
+          {
             name: "search_sequences",
             description:
               "Search for integer sequences using flexible criteria. Supports pagination.\n" +
@@ -422,6 +442,8 @@ class LODAMCPServer {
             return this.handleSubmit(safeArgs as { id: string; submitter: string; content: string; mode: string; type: string });
           case "get_sequence":
             return this.handleGetSequence(safeArgs as { id: string });
+          case "refresh_sequence":
+            return this.handleRefreshSequence(safeArgs as { id: string });
           case "search_sequences":
             return this.handleSearchSequences(safeArgs as { q: string; limit?: number; skip?: number; shuffle?: boolean });
           case "get_stats":
@@ -459,6 +481,25 @@ class LODAMCPServer {
             (seq.oeisRef ? `OEIS: ${seq.oeisRef}\n` : '')
         }
       ]
+    };
+  }
+
+  private async handleRefreshSequence(args: { id: string }) {
+    const { id } = args;
+    if (!/^A\d{6,}$/.test(id)) {
+      throw new McpError(ErrorCode.InvalidParams, "id must be a string like A000045");
+    }
+    const result = await this.apiClient.triggerSequenceRefresh(id);
+    return {
+      content: [
+        {
+          type: "text",
+          text: result.status === "success"
+            ? `Successfully queued ${id} for refresh from OEIS`
+            : `Error: ${result.message}`
+        }
+      ],
+      ...result
     };
   }
 
